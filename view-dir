@@ -1,0 +1,9 @@
+#!/usr/bin/fish
+clear
+while true
+    inotifywait "$argv[1]" -q -e close_write | read dir action file
+    tput cup 0 0
+    kitty icat "$dir$file"
+end
+
+

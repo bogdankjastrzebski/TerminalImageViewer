@@ -1,0 +1,70 @@
+#!/bin/bash
+
+trap 'echo "Exiting on Ctrl+C"; exit 0' SIGINT
+
+height="${2:-700}"
+clear
+
+# inotifywait -q -m -e modify $1 | while read -r null; do
+  # printf "\033[1;1h"
+  # printf "hello!"
+  # img2sixel --height $height $1
+  # kitty icat $1
+  #inotifywait -q -m -e modify "$1"
+# done
+#
+# while true; do
+  # inotifywait -m -q -e modify,create $1 | read -r null
+  # tput cup 0 0
+  # kitty icat $1
+  # clear
+  # printf "\033[1;1h"
+  # img2sixel --height $height $1
+  # viu $1
+  #inotifywait -q -m -e modify "$1"
+# done
+
+# while true; do
+#     echo $1
+#     inotifywait -q -e modify, create $1 | read -r directory action file
+#     # inotifywait -m $1 -e create -e moved_to | read -r directory action file
+#     echo $1
+#     echo $file
+#     echo $directory
+#     echo $action
+#     case "$file" in
+#         (*.xml)
+#             tput cup 0 0
+#             kitty icat $file
+#             ;;
+#     esac
+# done
+
+# -e create -e moved_to -e modify
+
+inotifywait -m $1 -e close_write | \
+  while read -r dir action file ; do
+    echo "Inotify returned: dir=$dir action=$action file=$file"
+    kitty icat "$dir$file"
+    echo "done"
+  done
+
+# while param=$(inotifywait -m $1); do
+#     echo $out | read -r directory action file
+#     echo $param
+#     echo -e "file:\t$file"
+#     echo -e "dir:\t$directory"
+#     echo -e "action:\t$action"
+#     echo -e "combined:\t$directory$file"
+# 
+#     case "$file" in
+#         (*.png)
+#             # tput cup 0 0
+#             kitty icat "$directory$file"
+#             echo 'done'
+#             ;;
+#     esac
+# done
+
+
+echo "This will only print if inotifywait finishes normally"

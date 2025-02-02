@@ -1,0 +1,121 @@
+#!/bin/bash
+
+trap 'kill $(jobs -p); exit' SIGINT
+
+export image_file="$1"
+export update_on_file_change=1
+export size=1
+
+function update_image() {
+
+  # Get terminal dimensions
+  window_width=$(tmux display-message -p '#{window_width}')
+  window_height=$(tmux display-message -p '#{window_height}')
+
+  pane_width=$(tmux display-message -p '#{pane_width}')
+  pane_height=$(tmux display-message -p '#{pane_height}')
+
+  # Calculate aspect ratio of the image
+  image_width=$(identify -format "%w" "$image_file")
+  image_height=$(identify -format "%h" "$image_file")
+  image_aspect_ratio=$(bc <<< "scale=0; $image_width / $image_height")
+
+  scale=$(echo "scale=0; 2560 / $window_width" | bc)
+  target_width=$(echo "scale=0; $size * $scale * $pane_width / 1" | bc)
+  target_height=$(echo "scale=0; $size * $scale * $pane_width / $image_aspect_ratio " | bc) # / 2
+  # target_height=$(bc <<< "scale=0; $scale * $pane_height")
+
+  echo $size
+  echo $scale
+  echo $target_width
+  echo $target_height
+  echo 
+  read -n 1 key
+
+  tempfile=$(mktemp)
+  img2sixel                     \
+      --width="$target_width"   \
+      --height="$target_height" \
+      "$image_file" > $tempfile
+  # clear
+  printf "\033[1;1h"
+  cat $tempfile
+  rm $tempfile
+}
+
+
+function handle_input() {
+  read -n 1 key
+
+  case "$key" in
+    ":")
+      read -r command
+      case "$command" in
+        "reset")
+          clear
+          update_image
+          ;;
+        "update_on_file_change")
+            if [ "$update_on_file_change" -eq 1 ]; then
+                export update_on_file_change=0
+            elif [ "$update_on_file_change" -eq 0 ]; then
+                export update_on_file_change=1
+            fi
+          ;;
+        "list")
+          echo "image_file=$image_file"
+          echo "update_on_file_change=$update_on_file_change"
+          echo "size=$size"
+          ;;
+        "q")
+          exit
+          ;;
+        *)
+          echo "Invalid command"
+          ;;
+      esac
+      ;;
+      "")
+        update_image
+      ;;
+      "h")
+        # Implement left movement
+        ;;
+      "j")
+        # Implement down movement
+        ;;
+      "k")
+        # Implement up movement
+        ;;
+      "l")
+        # Implement right movement
+        ;;
+      "+")
+          size=$(echo "scale=5; $size * 10 / 9" | bc)
+          update_image
+        ;;
+      "-")
+          size=$(echo "scale=5; $size * 9 / 10" | bc)
+          update_image
+        ;;
+      *)
+        # Handle other keys or invalid input
+        update_image
+        ;;
+  esac
+}
+
+
+# Start the image monitoring process in the background
+inotifywait -q -m -e modify "$image_file" | while read -r null; do
+  if [ "$update_on_file_change" -eq 1 ]; then
+    update_image
+  fi
+done &
+
+
+update_image
+while true; do
+  handle_input
+done
+# Handle user input in the foreground
